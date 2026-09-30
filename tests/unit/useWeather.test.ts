@@ -13,19 +13,41 @@ vi.mock('../../src/services/weatherService', async (importOriginal) => {
 afterEach(() => vi.resetAllMocks());
 
 describe('useWeather', () => {
-  it('loads the first city returned by search and exposes the weather', async () => {
-    vi.mocked(searchCities).mockResolvedValue([mockWeatherData.city]);
-    vi.mocked(getWeather).mockResolvedValue(mockWeatherData);
+  it('exposes up to five cities without loading weather before selection', async () => {
+    const cities = Array.from({ length: 7 }, (_, index) => ({
+      ...mockWeatherData.city,
+      id: index + 1,
+      name: `Cidade ${index + 1}`,
+    }));
+    vi.mocked(searchCities).mockResolvedValue(cities);
     const { result } = renderHook(() => useWeather());
 
     await act(async () => result.current.search(' Recife '));
 
     expect(searchCities).toHaveBeenCalledWith('Recife');
-    expect(getWeather).toHaveBeenCalledWith(mockWeatherData.city);
+    expect(getWeather).not.toHaveBeenCalled();
     expect(result.current.status).toBe('success');
-    expect(result.current.data).toBe(mockWeatherData);
-    expect(result.current.cities).toEqual([mockWeatherData.city]);
+    expect(result.current.phase).toBe('search');
+    expect(result.current.data).toBeNull();
+    expect(result.current.cities).toEqual(cities.slice(0, 5));
     expect(result.current.query).toBe('Recife');
+  });
+
+  it('loads only the explicitly selected city, including a non-first result', async () => {
+    const cities = [
+      { ...mockWeatherData.city, id: 1, name: 'Primeira' },
+      { ...mockWeatherData.city, id: 2, name: 'Segunda' },
+    ];
+    vi.mocked(searchCities).mockResolvedValue(cities);
+    vi.mocked(getWeather).mockResolvedValue({ ...mockWeatherData, city: cities[1] });
+    const { result } = renderHook(() => useWeather());
+
+    await act(async () => result.current.search('Cidade'));
+    await act(async () => result.current.selectCity(cities[1]));
+
+    expect(getWeather).toHaveBeenCalledWith(cities[1]);
+    expect(result.current.data?.city.name).toBe('Segunda');
+    expect(result.current.selectedCity?.name).toBe('Segunda');
   });
 
   it('sets empty without requesting weather when the search has no matches', async () => {
@@ -57,6 +79,7 @@ describe('useWeather', () => {
     await act(async () => result.current.selectCity(mockWeatherData.city));
     expect(result.current.status).toBe('error');
     expect(result.current.data).toBeNull();
+    expect(result.current.selectedCity).toEqual(mockWeatherData.city);
 
     await act(async () => result.current.retry());
     await waitFor(() => expect(result.current.status).toBe('success'));

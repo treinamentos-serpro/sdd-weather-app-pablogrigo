@@ -9,3 +9,5 @@ Você vai criar aqui, no Module 04:
 
 As tarefas **consomem** o plano (`plans/weather-app-plan.md`) e guiam a
 implementação (Modules 05–08).
+
+Bora

@@ -11,6 +11,7 @@ interface WeatherState {
   phase: Phase;
   data: WeatherData | null;
   cities: City[];
+  selectedCity: City | null;
   error: string | null;
   query: string;
 }
@@ -20,6 +21,7 @@ const initialState: WeatherState = {
   phase: 'search',
   data: null,
   cities: [],
+  selectedCity: null,
   error: null,
   query: '',
 };
@@ -35,15 +37,31 @@ export function useWeather() {
   const latestRequest = useRef(0);
   const lastOperation = useRef<Operation | null>(null);
 
-  async function loadCity(city: City, cities = state.cities, query = state.query) {
+  async function loadCity(city: City, cities: City[], query: string) {
     const requestId = ++latestRequest.current;
     lastOperation.current = { type: 'weather', city };
-    setState({ status: 'loading', phase: 'weather', data: null, cities, error: null, query });
+    setState({
+      status: 'loading',
+      phase: 'weather',
+      data: null,
+      cities,
+      selectedCity: city,
+      error: null,
+      query,
+    });
 
     try {
       const data = await getWeather(city);
       if (requestId !== latestRequest.current) return;
-      setState({ status: 'success', phase: 'weather', data, cities, error: null, query });
+      setState({
+        status: 'success',
+        phase: 'weather',
+        data,
+        cities,
+        selectedCity: city,
+        error: null,
+        query,
+      });
     } catch (error) {
       if (requestId !== latestRequest.current) return;
       setState({
@@ -51,6 +69,7 @@ export function useWeather() {
         phase: 'weather',
         data: null,
         cities,
+        selectedCity: city,
         error: getErrorMessage(error),
         query,
       });
@@ -68,16 +87,40 @@ export function useWeather() {
 
     const requestId = ++latestRequest.current;
     lastOperation.current = { type: 'search', query };
-    setState({ status: 'loading', phase: 'search', data: null, cities: [], error: null, query });
+    setState({
+      status: 'loading',
+      phase: 'search',
+      data: null,
+      cities: [],
+      selectedCity: null,
+      error: null,
+      query,
+    });
 
     try {
-      const cities = await searchCities(query);
+      const cities = (await searchCities(query)).slice(0, 5);
       if (requestId !== latestRequest.current) return;
       if (cities.length === 0) {
-        setState({ status: 'empty', phase: 'search', data: null, cities: [], error: null, query });
+        setState({
+          status: 'empty',
+          phase: 'search',
+          data: null,
+          cities: [],
+          selectedCity: null,
+          error: null,
+          query,
+        });
         return;
       }
-      await loadCity(cities[0], cities, query);
+      setState({
+        status: 'success',
+        phase: 'search',
+        data: null,
+        cities,
+        selectedCity: null,
+        error: null,
+        query,
+      });
     } catch (error) {
       if (requestId !== latestRequest.current) return;
       setState({
@@ -85,6 +128,7 @@ export function useWeather() {
         phase: 'search',
         data: null,
         cities: [],
+        selectedCity: null,
         error: getErrorMessage(error),
         query,
       });
@@ -97,12 +141,12 @@ export function useWeather() {
     if (operation.type === 'search') {
       await search(operation.query);
     } else {
-      await loadCity(operation.city);
+      await loadCity(operation.city, state.cities, state.query);
     }
   }
 
   async function selectCity(city: City) {
-    await loadCity(city);
+    await loadCity(city, state.cities, state.query);
   }
 
   function reset() {
