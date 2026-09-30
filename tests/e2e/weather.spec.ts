@@ -80,13 +80,14 @@ test('orienta entrada vazia e com símbolos sem chamar geocoding', async ({ page
   const search = page.getByRole('searchbox', { name: 'Buscar cidade' });
   const submit = page.getByRole('button', { name: 'Buscar' });
   await submit.click();
-  await expect(page.getByRole('status')).toContainText('Informe o nome de uma cidade.');
+  const searchStatus = page.getByRole('search').getByRole('status');
+  await expect(searchStatus).toContainText('Informe o nome de uma cidade.');
   await search.fill('   ');
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('status')).toContainText('Informe o nome de uma cidade.');
+  await expect(searchStatus).toContainText('Informe o nome de uma cidade.');
   await search.fill('!!!');
   await submit.click();
-  await expect(page.getByRole('status')).toContainText('letras ou números');
+  await expect(searchStatus).toContainText('letras ou números');
   expect(requests).toBe(0);
 
   await search.fill('São José');
