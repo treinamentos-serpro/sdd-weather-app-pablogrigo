@@ -20,6 +20,7 @@ describe('App com Open-Meteo', () => {
     expect(screen.getByRole('heading', { name: 'Encontre sua cidade' })).toBeInTheDocument();
     await user.type(screen.getByRole('searchbox', { name: 'Buscar cidade' }), 'Recife');
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    await user.click(screen.getByRole('button', { name: 'Selecionar Recife, Pernambuco, Brasil' }));
     const current = await screen.findByRole('region', { name: 'Clima atual' });
     expect(within(current).getByText('28 °C')).toBeInTheDocument();
     expect(screen.getByRole('search')).toHaveAttribute('aria-busy', 'false');
@@ -45,6 +46,7 @@ describe('App com Open-Meteo', () => {
 
     await user.type(screen.getByRole('searchbox', { name: 'Buscar cidade' }), 'Recife');
     await user.keyboard('{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Selecionar Recife, Pernambuco, Brasil' }));
     await waitFor(() => expect(weatherService.getWeather).toHaveBeenCalled());
     expect(screen.getByRole('search')).toHaveAttribute('aria-busy', 'true');
 
@@ -64,6 +66,7 @@ describe('App com Open-Meteo', () => {
     const search = screen.getByRole('searchbox', { name: 'Buscar cidade' });
     await user.type(search, 'Recife');
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    await user.click(screen.getByRole('button', { name: 'Selecionar Recife, Pernambuco, Brasil' }));
     await screen.findByRole('region', { name: 'Clima atual' });
 
     await user.clear(search);
@@ -75,6 +78,7 @@ describe('App com Open-Meteo', () => {
     await user.clear(search);
     await user.type(search, 'Recife');
     await user.keyboard('{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Selecionar Recife, Pernambuco, Brasil' }));
     await screen.findByRole('region', { name: 'Clima atual' });
   });
 
@@ -89,6 +93,7 @@ describe('App com Open-Meteo', () => {
     const search = screen.getByRole('searchbox', { name: 'Buscar cidade' });
     await user.type(search, 'Recife');
     await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    await user.click(screen.getByRole('button', { name: 'Selecionar Recife, Pernambuco, Brasil' }));
     await screen.findByRole('alert');
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(await screen.findByRole('region', { name: 'Clima atual' })).toBeInTheDocument();

@@ -40,12 +40,18 @@ async function searchRecife(page: Page) {
   await page.getByRole('button', { name: 'Buscar' }).click();
 }
 
+async function selectRecife(page: Page) {
+  await page.getByRole('button', { name: 'Selecionar Recife, Pernambuco, Brasil' }).click();
+}
+
 test('busca uma cidade, exibe a previsão de cinco dias e converte para Fahrenheit', async ({
   page,
 }) => {
   await mockWeatherApi(page);
   await page.goto('/');
   await searchRecife(page);
+  await expect(page.getByRole('heading', { name: 'Escolha uma cidade' })).toBeVisible();
+  await selectRecife(page);
 
   const current = page.getByRole('region', { name: 'Clima atual' });
   await expect(current).toContainText('Recife');
@@ -92,6 +98,7 @@ test('orienta entrada vazia e com símbolos sem chamar geocoding', async ({ page
 
   await search.fill('São José');
   await page.keyboard.press('Enter');
+  await page.getByRole('button', { name: 'Selecionar Recife, Pernambuco, Brasil' }).click();
   await expect(page.getByRole('region', { name: 'Clima atual' })).toBeVisible();
   expect(queries).toEqual(['São José']);
 });
@@ -109,6 +116,7 @@ test('mantém condições atuais e cinco datas quando o forecast está incomplet
   );
   await page.goto('/');
   await searchRecife(page);
+  await selectRecife(page);
 
   const current = page.getByRole('region', { name: 'Clima atual' });
   await expect(current).toContainText('24 °C');
@@ -135,6 +143,7 @@ test('permite repetir a busca depois de uma falha de rede offline', async ({ pag
 
   await expect(page.getByRole('alert')).toContainText('Não foi possível concluir a consulta');
   await page.getByRole('button', { name: 'Tentar novamente' }).click();
+  await selectRecife(page);
   await expect(page.getByRole('region', { name: 'Clima atual' })).toContainText('Recife');
   expect(attempts).toBe(2);
 });
@@ -144,9 +153,48 @@ test('completa o fluxo de busca no viewport mobile de 375x812', async ({ page })
   await mockWeatherApi(page);
   await page.goto('/');
   await searchRecife(page);
+  await selectRecife(page);
 
   await expect(page.getByRole('region', { name: 'Clima atual' })).toContainText('Recife');
   await expect(page.getByRole('region', { name: 'Clima atual' })).toContainText('0 °C');
   await expect(page.getByRole('region', { name: 'Previsão de 5 dias' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fahrenheit (°F)' })).toBeVisible();
+});
+
+test('exibe cinco cidades na ordem, diferencia homônimos e permite selecionar por teclado', async ({
+  page,
+}) => {
+  let forecastRequests = 0;
+  const cities = Array.from({ length: 7 }, (_, index) => ({
+    ...city,
+    id: index + 1,
+    name: index === 1 ? 'Recife' : `Cidade ${index + 1}`,
+    admin1: `Região ${index + 1}`,
+  }));
+  await page.route('https://geocoding-api.open-meteo.com/**', async (route) => {
+    await route.fulfill({ json: { results: cities } });
+  });
+  await page.route('https://api.open-meteo.com/**', async (route) => {
+    forecastRequests += 1;
+    await route.fulfill({ json: forecast });
+  });
+  await page.goto('/');
+  await searchRecife(page);
+
+  const results = page.getByRole('list', { name: 'Cidades encontradas' });
+  await expect(results.getByRole('listitem')).toHaveCount(5);
+  await expect(results.getByRole('button').nth(0)).toHaveAccessibleName(
+    'Selecionar Cidade 1, Região 1, Brasil',
+  );
+  await expect(results.getByRole('button').nth(1)).toHaveAccessibleName(
+    'Selecionar Recife, Região 2, Brasil',
+  );
+  expect(forecastRequests).toBe(0);
+
+  const secondResult = results.getByRole('button').nth(1);
+  await secondResult.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Cidade selecionada: Recife')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Clima atual' })).toContainText('Recife');
+  expect(forecastRequests).toBe(1);
 });

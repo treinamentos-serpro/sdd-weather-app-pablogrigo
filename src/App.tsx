@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import CityResults from './components/CityResults';
 import CurrentWeather from './components/CurrentWeather';
 import ForecastList from './components/ForecastList';
 import SearchBar from './components/SearchBar';
@@ -52,7 +53,19 @@ export default function App() {
             hint="Busque uma cidade para consultar o tempo."
           />
         )}
-        {isLoading && <LoadingState phase={weather.phase} />}
+        {isLoading && (
+          <div className="space-y-6">
+            {weather.selectedCity && (
+              <p className="text-center text-lg font-semibold" aria-live="polite">
+                Cidade selecionada: {weather.selectedCity.name}
+              </p>
+            )}
+            <LoadingState phase={weather.phase} cityName={weather.selectedCity?.name} />
+          </div>
+        )}
+        {weather.status === 'success' && weather.phase === 'search' && (
+          <CityResults cities={weather.cities} onSelect={weather.selectCity} />
+        )}
         {weather.status === 'empty' && <EmptyState />}
         {weather.status === 'error' && (
           <ErrorState
