@@ -1,47 +1,53 @@
-/**
- * Contratos de domínio compartilhados do Weather App.
- *
- * Decisão de arquitetura: as temperaturas são sempre armazenadas em Celsius
- * internamente e convertidas apenas na camada de apresentação. Assim, a troca
- * de unidade (C/F) nunca dispara um novo request.
- */
-
 export type Unit = 'celsius' | 'fahrenheit';
 
-/** Resultado da API de geocoding (uma cidade). */
 export interface City {
-  id: number;
+  id?: number;
   name: string;
-  country: string;
-  /** Estado/região, quando disponível (ajuda a desambiguar homônimos). */
+  country?: string;
+  countryCode?: string;
   admin1?: string;
+  admin2?: string;
   latitude: number;
   longitude: number;
 }
 
-/** Condições atuais. Temperatura sempre em °C. */
 export interface CurrentWeather {
-  temperature: number;
-  weatherCode: number;
-  humidity: number;
-  windSpeed: number;
-  pressure: number;
-  precipitation: number;
-  time: string;
+  temperatureC: number | null;
+  weatherCode: number | null;
+  observedAt: string | null;
+  localTime: string | null;
+  humidityPercent?: number | null;
+  windSpeedKmh?: number | null;
+  precipitationMm?: number | null;
+  pressureHpa?: number | null;
 }
 
-/** Um dia da previsão. Temperaturas sempre em °C. */
 export interface ForecastDay {
   date: string;
-  min: number;
-  max: number;
-  weatherCode: number;
-  precipitationProbability: number;
+  weatherCode: number | null;
+  minimumC: number | null;
+  maximumC: number | null;
+  precipitationProbabilityPercent?: number | null;
+  precipitationSumMm?: number | null;
 }
 
-/** Agregado entregue à UI: cidade + clima atual + 5 dias de previsão. */
 export interface WeatherData {
   city: City;
   current: CurrentWeather;
   forecast: ForecastDay[];
+  timezone: string | null;
+  source: 'Open-Meteo';
+}
+
+export type RequestStatus = 'idle' | 'loading' | 'success' | 'error' | 'empty';
+
+export interface WeatherUiState {
+  status: RequestStatus;
+  phase: 'search' | 'weather';
+  query: string;
+  cityResults: City[];
+  selectedCity: City | null;
+  weather: WeatherData | null;
+  unit: Unit;
+  errorMessage: string | null;
 }

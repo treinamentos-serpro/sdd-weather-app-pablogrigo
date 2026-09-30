@@ -1,76 +1,79 @@
-import type { CurrentWeather as CurrentWeatherType, City, Unit } from '../types/weather';
 import { formatTemperature } from '../lib/temperature';
-import { getWeatherIcon, getWeatherLabel } from '../lib/weatherCodes';
+import { getWeatherInfo } from '../lib/weatherCodes';
+import type { City, CurrentWeather as CurrentWeatherData, Unit } from '../types/weather';
 
 interface CurrentWeatherProps {
   city: City;
-  current: CurrentWeatherType;
+  current: CurrentWeatherData;
   unit: Unit;
 }
 
-interface MetricProps {
-  icon: string;
-  label: string;
-  value: string;
-}
-
-function Metric({ icon, label, value }: MetricProps) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-md">
-      <span aria-hidden="true" className="text-xl">
-        {icon}
-      </span>
-      <div>
-        <p className="text-xs text-white/50">{label}</p>
-        <p className="font-semibold">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-/** Seção "hero" com as condições atuais da cidade selecionada. */
 export default function CurrentWeather({ city, current, unit }: CurrentWeatherProps) {
   const location = [city.admin1, city.country].filter(Boolean).join(', ');
+  const condition = current.weatherCode === null ? null : getWeatherInfo(current.weatherCode);
+  const updateTime = current.localTime?.match(/T(\d{2}:\d{2})/)?.[1] ?? null;
+  const observedAt = current.observedAt === null ? Number.NaN : Date.parse(current.observedAt);
+  const hasVerifiedTimestamp = updateTime !== null && Number.isFinite(observedAt);
+  const isOutdated = hasVerifiedTimestamp && Date.now() - observedAt > 60 * 60 * 1000;
+  const metrics = [
+    { label: 'Umidade', value: current.humidityPercent, suffix: '%' },
+    { label: 'Vento', value: current.windSpeedKmh, suffix: 'km/h' },
+    { label: 'Precipitação', value: current.precipitationMm, suffix: 'mm' },
+    { label: 'Pressão', value: current.pressureHpa, suffix: 'hPa' },
+  ];
 
   return (
     <section
       aria-label="Clima atual"
-      className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-glass md:p-8"
+      className="w-full border-y border-white/10 bg-white/5 px-4 py-8 text-white backdrop-blur-md sm:px-6"
     >
-      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold md:text-3xl">{city.name}</h2>
-          {location && <p className="text-white/60">{location}</p>}
-
-          <div className="mt-6 flex items-center gap-4">
-            <span aria-hidden="true" className="text-6xl">
-              {getWeatherIcon(current.weatherCode)}
-            </span>
-            <span className="text-6xl font-light md:text-7xl">
-              {formatTemperature(current.temperature, unit)}
-            </span>
-          </div>
-          <p className="mt-2 text-white/70">{getWeatherLabel(current.weatherCode)}</p>
+      <div className="mx-auto max-w-5xl md:flex md:items-center md:justify-between md:gap-8">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-semibold">{city.name}</h2>
+          {location && <p className="text-white/70">{location}</p>}
+          {current.temperatureC === null && condition === null ? (
+            <p className="mt-6 text-white/70">Condições atuais indisponíveis</p>
+          ) : (
+            <div className="mt-6 flex min-w-0 items-center gap-4">
+              {condition && (
+                <span role="img" aria-label={condition.label} className="text-5xl">
+                  {condition.icon}
+                </span>
+              )}
+              <p
+                className={
+                  current.temperatureC === null
+                    ? 'min-w-0 text-xl font-medium'
+                    : 'text-6xl font-light sm:text-7xl'
+                }
+              >
+                {current.temperatureC === null
+                  ? 'Indisponível'
+                  : formatTemperature(current.temperatureC, unit)}
+              </p>
+            </div>
+          )}
+          <p className="mt-2 text-white/70">{condition?.label ?? 'Condição indisponível'}</p>
+          <p className="mt-4 text-sm text-white/70">
+            {updateTime
+              ? `Horário de atualização: ${updateTime}`
+              : 'Horário de atualização não informado'}
+          </p>
+          {!hasVerifiedTimestamp && (
+            <p className="text-sm text-white/70">Atualidade não verificada</p>
+          )}
+          {isOutdated && <p className="text-sm text-white/70">Desatualizado</p>}
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Metric icon="💧" label="Umidade" value={`${Math.round(current.humidity)}%`} />
-          <Metric
-            icon="💨"
-            label="Vento"
-            value={`${Math.round(current.windSpeed)} km/h`}
-          />
-          <Metric
-            icon="🌧️"
-            label="Precipitação"
-            value={`${current.precipitation} mm`}
-          />
-          <Metric
-            icon="📊"
-            label="Pressão"
-            value={`${Math.round(current.pressure)} hPa`}
-          />
-        </div>
+        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 md:mt-0 md:min-w-72">
+          {metrics.map(({ label, value, suffix }) => (
+            <div key={label} className="border-t border-white/10 pt-3">
+              <dt className="text-sm text-white/70">{label}</dt>
+              <dd className="mt-1 font-medium">
+                {value == null ? 'Indisponível' : `${value} ${suffix}`}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );

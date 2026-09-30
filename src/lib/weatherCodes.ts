@@ -1,16 +1,9 @@
-/**
- * Mapeia o `weather_code` (WMO) da Open-Meteo para um rótulo em pt-BR e um
- * ícone (emoji). Mantém o domínio de apresentação isolado e testável.
- *
- * Referência: https://open-meteo.com/en/docs (WMO Weather interpretation codes)
- */
-
 interface WeatherInfo {
   label: string;
   icon: string;
 }
 
-const WEATHER_CODE_MAP: Record<number, WeatherInfo> = {
+const weatherCodes: Record<number, WeatherInfo> = {
   0: { label: 'Céu limpo', icon: '☀️' },
   1: { label: 'Predomínio de sol', icon: '🌤️' },
   2: { label: 'Parcialmente nublado', icon: '⛅' },
@@ -41,16 +34,6 @@ const WEATHER_CODE_MAP: Record<number, WeatherInfo> = {
   99: { label: 'Trovoadas com granizo forte', icon: '⛈️' },
 };
 
-const UNKNOWN: WeatherInfo = { label: 'Condição desconhecida', icon: '🌡️' };
-
 export function getWeatherInfo(code: number): WeatherInfo {
-  return WEATHER_CODE_MAP[code] ?? UNKNOWN;
-}
-
-export function getWeatherLabel(code: number): string {
-  return getWeatherInfo(code).label;
-}
-
-export function getWeatherIcon(code: number): string {
-  return getWeatherInfo(code).icon;
+  return weatherCodes[code] ?? { label: 'Condição desconhecida', icon: '🌡️' };
 }
